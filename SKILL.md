@@ -1,6 +1,6 @@
 ---
 name: vrchat-world-unity-automation
-description: Drive the open Unity editor and VRChat clients from the shell for a VRChat world project, so tests run with nobody at the computer. Use when setting up testing automation in a Unity project, running Play Mode tests, compiling after code changes, running editor menu items, uploading a VRChat world, or launching, listing or closing VRChat clients for several-client checks in production.
+description: Drive the open Unity editor and VRChat clients from the shell for a VRChat world project, so tests run with nobody at the computer. Use in any project with a TestingAutomation.md in its root, and whenever work there needs Play Mode tests (including a plan step's verification), compiling after code changes, editor menu items, a VRChat world upload, or launching, listing or closing VRChat clients for several-client checks; also when setting up testing automation in a Unity project.
 ---
 
 # VRChat world Unity automation
