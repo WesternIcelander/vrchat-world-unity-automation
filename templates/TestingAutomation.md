@@ -1,6 +1,6 @@
 # TestingAutomation.md
 
-This project's settings for the vrchat-world-unity-automation skill, specific to this developer. Not in git (the project's `.gitignore` lists it).
+This project's settings for the vrchat-world-unity-automation skill, specific to this developer. Not in git (listed in the project's `.gitignore` or `.git/info/exclude`).
 
 ## Play Mode tests
 

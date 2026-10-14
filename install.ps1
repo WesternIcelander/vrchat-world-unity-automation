@@ -4,17 +4,22 @@
 #     rewrites Packages/packages-lock.json, which projects commit;
 #   - lists it and its .meta in .git/info/exclude (git's own ignore list, which isn't committed), as the trigger is
 #     this developer's tool;
-#   - lists TestingAutomation.md in the project's .gitignore (a change to commit), so nobody commits their own;
+#   - keeps TestingAutomation.md out of git where the developer chooses: -SettingsIgnore gitignore (the project's
+#     .gitignore, a change to commit, so nobody commits their own) or -SettingsIgnore exclude (.git/info/exclude, this
+#     clone only). Without either, when git doesn't already ignore it, it says so and leaves it uncreated;
 #   - creates TestingAutomation.md from the template when the project has none.
 #
-#   & "$HOME\.claude\skills\vrchat-world-unity-automation\install.ps1" [-Project <path>] [-Force]
+#   & "$HOME\.claude\skills\vrchat-world-unity-automation\install.ps1" [-Project <path>]
+#       [-SettingsIgnore gitignore|exclude] [-Force]
 param(
     [string]$Project = (Get-Location).Path,
+    [ValidateSet("", "gitignore", "exclude")][string]$SettingsIgnore = "",
     [switch]$Force
 )
 $ErrorActionPreference = "Stop"
 $skill = $PSScriptRoot
 $folderName = "VRChatWorldUnityAutomation"
+$needsChoice = $false
 
 if (-not (Test-Path (Join-Path $Project "Assets")) -or -not (Test-Path (Join-Path $Project "ProjectSettings"))) {
     throw "$Project isn't a Unity project (no Assets or ProjectSettings folder)"
@@ -62,29 +67,46 @@ if ($LASTEXITCODE -eq 0 -and $exclude) {
     } else {
         Write-Output "git: already excluded"
     }
-    # The project's .gitignore, keeping the file's own line endings.
-    $gitignore = Join-Path $Project ".gitignore"
+    # TestingAutomation.md: kept out of git where the developer chose (-SettingsIgnore), unless git already ignores it.
+    Push-Location $Project
+    try {
+        & git check-ignore -q TestingAutomation.md 2>$null
+        $alreadyIgnored = ($LASTEXITCODE -eq 0)
+    } finally {
+        Pop-Location
+    }
     $entry = "/TestingAutomation.md"
-    $text = if (Test-Path $gitignore) { [IO.File]::ReadAllText($gitignore) } else { "" }
-    if (($text -split "\r?\n") -contains $entry) {
-        Write-Output ".gitignore: already lists $entry"
-    } else {
+    $comment = "# Developer-specific test automation settings (vrchat-world-unity-automation Claude Code skill)"
+    if ($alreadyIgnored) {
+        Write-Output "TestingAutomation.md: already ignored by git"
+    } elseif ($SettingsIgnore -eq "exclude") {
+        Add-Content -Path $exclude -Value @("", $comment, $entry)
+        Write-Output "TestingAutomation.md: excluded in .git/info/exclude"
+    } elseif ($SettingsIgnore -eq "gitignore") {
+        # The project's .gitignore, keeping the file's own line endings.
+        $gitignore = Join-Path $Project ".gitignore"
+        $text = if (Test-Path $gitignore) { [IO.File]::ReadAllText($gitignore) } else { "" }
         $newline = if ($text -match "\r\n") { "`r`n" } else { "`n" }
         $prefix = if ($text -eq "" -or $text.EndsWith("`n")) { "" } else { $newline }
         if ($text -ne "") { $prefix += $newline }
-        $block = $prefix + "# Developer-specific test automation settings (vrchat-world-unity-automation Claude Code skill)" +
-            $newline + $entry + $newline
-        [IO.File]::AppendAllText($gitignore, $block)
-        Write-Output ".gitignore: added $entry (commit it)"
+        [IO.File]::AppendAllText($gitignore, $prefix + $comment + $newline + $entry + $newline)
+        Write-Output "TestingAutomation.md: added to .gitignore (commit it)"
+    } else {
+        $needsChoice = $true
+        Write-Output ("TestingAutomation.md: not ignored by git yet. Ask the developer, then run again with " +
+            "-SettingsIgnore gitignore (the project's .gitignore, committed) or -SettingsIgnore exclude " +
+            "(.git/info/exclude, this clone only)")
     }
 } else {
     Write-Output "git: not a git repository; nothing to exclude"
 }
 
-# The project's settings file.
+# The project's settings file, once git ignores it.
 $settings = Join-Path $Project "TestingAutomation.md"
 if (Test-Path $settings) {
     Write-Output "TestingAutomation.md: kept"
+} elseif ($needsChoice) {
+    Write-Output "TestingAutomation.md: not created until it's ignored"
 } else {
     Copy-Item (Join-Path $skill "templates\TestingAutomation.md") $settings
     Write-Output "TestingAutomation.md: created from the template; fill it in"
