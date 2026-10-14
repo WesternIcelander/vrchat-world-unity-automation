@@ -1,0 +1,26 @@
+{
+    "name": "Siggi.VRChatWorldUnityAutomation.Editor",
+    "rootNamespace": "",
+    "references": [
+        "VRC.SDK3.Editor",
+        "VRC.SDKBase.Editor",
+        "VRC.SDKBase"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.vrchat.worlds",
+            "expression": "",
+            "define": "VRC_WORLDS_SDK"
+        }
+    ],
+    "noEngineReferences": false
+}
