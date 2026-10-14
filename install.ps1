@@ -1,8 +1,10 @@
-# Installs or updates the editor trigger in a Unity project, without changing anything git tracks:
+# Installs or updates the editor trigger in a Unity project:
 #   - copies unity/ to Assets/VRChatWorldUnityAutomation/ (editor-only, with its own assembly definition) when it's
 #     missing or older than the bundled one (VERSION.txt), or with -Force. Not an embedded package: registering one
 #     rewrites Packages/packages-lock.json, which projects commit;
-#   - lists it, its .meta and TestingAutomation.md in .git/info/exclude (git's own ignore list, which isn't committed);
+#   - lists it and its .meta in .git/info/exclude (git's own ignore list, which isn't committed), as the trigger is
+#     this developer's tool;
+#   - lists TestingAutomation.md in the project's .gitignore (a change to commit), so nobody commits their own;
 #   - creates TestingAutomation.md from the template when the project has none.
 #
 #   & "$HOME\.claude\skills\vrchat-world-unity-automation\install.ps1" [-Project <path>] [-Force]
@@ -51,7 +53,7 @@ if ($LASTEXITCODE -eq 0 -and $exclude) {
     if (-not (Test-Path $exclude)) { New-Item -ItemType File $exclude | Out-Null }
     $lines = @(Get-Content $exclude)
     $added = @()
-    foreach ($entry in @("/Assets/$folderName/", "/Assets/$folderName.meta", "/TestingAutomation.md")) {
+    foreach ($entry in @("/Assets/$folderName/", "/Assets/$folderName.meta")) {
         if ($lines -notcontains $entry) { $added += $entry }
     }
     if ($added.Count -gt 0) {
@@ -59,6 +61,21 @@ if ($LASTEXITCODE -eq 0 -and $exclude) {
         Write-Output "git: excluded $($added -join ', ')"
     } else {
         Write-Output "git: already excluded"
+    }
+    # The project's .gitignore, keeping the file's own line endings.
+    $gitignore = Join-Path $Project ".gitignore"
+    $entry = "/TestingAutomation.md"
+    $text = if (Test-Path $gitignore) { [IO.File]::ReadAllText($gitignore) } else { "" }
+    if (($text -split "\r?\n") -contains $entry) {
+        Write-Output ".gitignore: already lists $entry"
+    } else {
+        $newline = if ($text -match "\r\n") { "`r`n" } else { "`n" }
+        $prefix = if ($text -eq "" -or $text.EndsWith("`n")) { "" } else { $newline }
+        if ($text -ne "") { $prefix += $newline }
+        $block = $prefix + "# Developer-specific test automation settings (vrchat-world-unity-automation Claude Code skill)" +
+            $newline + $entry + $newline
+        [IO.File]::AppendAllText($gitignore, $block)
+        Write-Output ".gitignore: added $entry (commit it)"
     }
 } else {
     Write-Output "git: not a git repository; nothing to exclude"

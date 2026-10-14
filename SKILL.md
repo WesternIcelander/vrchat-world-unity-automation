@@ -5,16 +5,16 @@ description: Drive the open Unity editor and VRChat clients from the shell for a
 
 # VRChat world Unity automation
 
-Everything lives in this skill's folder (`$HOME\.claude\skills\vrchat-world-unity-automation\`, "the skill folder" below). A project gets only these, none of them in git:
+Everything lives in this skill's folder (`$HOME\.claude\skills\vrchat-world-unity-automation\`, "the skill folder" below). A project gets only these:
 
 - `Assets/VRChatWorldUnityAutomation/` (and its `.meta`): the editor trigger, editor-only with its own assembly definition, copied from the skill's `unity/` by `install.ps1`. Not an embedded package: registering one rewrites `Packages/packages-lock.json`, which projects commit.
 - `TestingAutomation.md`: that project's settings (test texts, test instance, reminders). **Read it before any testing work in the project**, and follow its reminders.
 
-They're listed in `.git/info/exclude`, so the repository doesn't change. Never commit them, and never add them to `.gitignore`.
+The trigger folder and its `.meta` are listed in `.git/info/exclude` (git's own ignore list, not committed): it's this developer's tool. `TestingAutomation.md` is listed in the project's `.gitignore`, the one change `install.ps1` makes to the repository: commit that line, so nobody commits their own settings. Never commit the files themselves.
 
 ## Setting up a project
 
-1. Run `& "$HOME\.claude\skills\vrchat-world-unity-automation\install.ps1" -Project <project path>` with the PowerShell tool (from Bash, use `powershell -ExecutionPolicy Bypass -File <script> …`, since the execution policy blocks scripts there). It copies the editor scripts when they're missing or older than the bundled ones, adds the exclusions, and creates `TestingAutomation.md` from the template if there's none. After changing the bundled scripts, bump `unity/VERSION.txt` and run it again in each project, then queue a `refresh`.
+1. Run `& "$HOME\.claude\skills\vrchat-world-unity-automation\install.ps1" -Project <project path>` with the PowerShell tool (from Bash, use `powershell -ExecutionPolicy Bypass -File <script> …`, since the execution policy blocks scripts there). It copies the editor scripts when they're missing or older than the bundled ones, adds the exclusions, adds `/TestingAutomation.md` to `.gitignore` if it isn't there (tell the developer to commit that), and creates `TestingAutomation.md` from the template if there's none. After changing the bundled scripts, bump `unity/VERSION.txt` and run it again in each project, then queue a `refresh`.
 2. If no trigger was running in that editor yet, Unity has to compile the new scripts once, and its own auto-refresh doesn't compile while its window lacks focus: ask the developer to click on Unity once. Once `Temp/EditorTrigger/log.txt` answers a `refresh`, everything works with Unity in the background.
 3. Fill in `TestingAutomation.md` with the developer: what the project's tests log when done, the test instance URL, which profiles (from `developer.md`) to launch.
 

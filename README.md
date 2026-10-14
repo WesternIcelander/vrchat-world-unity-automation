@@ -10,6 +10,6 @@ Ask Claude to create your `developer.md` (your VRChat accounts and profiles, VR 
 
 ## Using it in a project
 
-Ask Claude to set up testing automation in the project. It runs `install.ps1`, which adds the editor trigger in `Assets/VRChatWorldUnityAutomation/` and a `TestingAutomation.md` for the project's settings, both listed in `.git/info/exclude` so the project's repository doesn't change. Click on Unity once so it compiles the trigger; after that it works with Unity in the background.
+Ask Claude to set up testing automation in the project. It runs `install.ps1`, which adds the editor trigger in `Assets/VRChatWorldUnityAutomation/` (listed in `.git/info/exclude`, so it stays out of the repository) and a `TestingAutomation.md` for your settings for that project, which it adds to the project's `.gitignore`: commit that one line. Click on Unity once so it compiles the trigger; after that it works with Unity in the background.
 
 How it all works: `SKILL.md`.
