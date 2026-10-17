@@ -210,6 +210,15 @@ public static class EditorTrigger {
             }
             VRCWorld world = await VRCApi.GetWorld(pipeline.blueprintId, true);
             Log("upload: building and uploading " + world.Name + " (" + pipeline.blueprintId + ")");
+            // The SDK asks for its copyright ownership agreement once per Unity session per world, as a modal in the
+            // control panel's Build section that waits for OK. It's the developer's own certification, so it's left
+            // for them; this only says the upload is waiting on it. The SDK keeps the worlds agreed to this session in
+            // this SessionState key (VRCCopyrightAgreement, not public API: if it moves, the note just shows anyway).
+            string agreed = SessionState.GetString("VRCSdkControlPanel.CopyrightAgreement.ContentList", "");
+            if (Array.IndexOf(agreed.Split(';'), world.ID) < 0) {
+                Log("upload: waiting for the developer to accept VRChat's \"Copyright ownership agreement\" (OK in the "
+                    + "control panel's Build section; asked once per Unity session per world)");
+            }
             await builder.BuildAndUpload(world);
             Log("upload: done");
         } catch (Exception e) {

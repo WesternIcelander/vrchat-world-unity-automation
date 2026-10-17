@@ -33,6 +33,8 @@ Append commands to `Temp/EditorTrigger/queue.txt` in the project (one per line; 
 
 Full details: the Editor log, `%LOCALAPPDATA%\Unity\Editor\Editor.log`.
 
+**The copyright agreement.** The first `upload` of a world in each Unity session stops at VRChat's "Copyright ownership agreement" ("By clicking OK, I certify that I have the necessary rights to upload this content…"), a modal in the control panel's Build section, and the trigger logs `upload: waiting for the developer to accept VRChat's "Copyright ownership agreement"`. It's the developer's own legal certification: never click it or work around it. Tell them to click OK there (when they may be away, say the upload is waiting for it); Cancel fails the upload. After a Unity restart, expect it again, and say so before a production run.
+
 **Things that stop the queue.** A modal dialog waits until someone closes it, and the Editor log goes quiet meanwhile: an editor script's error dialog, or Unity's "The open scene(s) have been modified externally" (Reload / Ignore) after a git operation (reset, checkout, pull) rewrites the open scene, which appears at the next refresh. If the trigger's log stops answering and the Editor log hasn't been written for a while:
 
 1. List the Unity process's visible top-level windows (PowerShell `Add-Type` with `EnumWindows`, `GetWindowThreadProcessId`, `GetWindowText`, `GetClassName`). A dialog is a `#32770` window besides the main `UnityContainerWndClass` one.
