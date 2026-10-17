@@ -11,14 +11,22 @@
 # (taskkill without /F) and forces it after -WaitSeconds.
 param(
     [Parameter(Mandatory = $true, Position = 0)][ValidateSet("start", "stop", "clients", "logs")][string]$Action,
-    [int[]]$Profiles = @(),
-    [int[]]$VrProfiles = @(),
+    [string[]]$Profiles = @(),
+    [string[]]$VrProfiles = @(),
     [string]$Url = "",
     [int]$Minutes = 30,
     [int]$WaitSeconds = 15,
     [string]$Launcher = "C:\Program Files (x86)\Steam\steamapps\common\VRChat\launch.exe",
     [string]$LogFolder = "$env:USERPROFILE\AppData\LocalLow\VRChat\VRChat"
 )
+
+# Profile lists as numbers. Run with powershell -File (as from Bash), "-Profiles 0,2" arrives as the one string
+# "0,2" rather than an array, so each entry is split on commas.
+function ConvertTo-Numbers($list) {
+    @($list | ForEach-Object { "$_" -split ',' } | Where-Object { $_.Trim() -ne '' } | ForEach-Object { [int]$_.Trim() })
+}
+$profileNumbers = ConvertTo-Numbers $Profiles
+$vrProfileNumbers = ConvertTo-Numbers $VrProfiles
 
 # The profile a client was started with (0 when its log names none) and the account it's logged in as.
 function Read-Log($path) {
@@ -32,14 +40,19 @@ function Read-Log($path) {
 }
 
 # The running VRChat clients with their logs. Easy Anti-Cheat hides a client's command line, so each process is
-# matched to the log created within a few seconds of its start, and the profile is read from that log.
+# matched to the log created within a few seconds of its start, and the profile is read from that log. Clients
+# started a few seconds apart fall in each other's window, so the processes take logs in start order, each the
+# earliest one no earlier process has taken.
 function Get-Clients {
     $logs = @(Get-ChildItem -Path $LogFolder -Filter "output_log_*.txt")
-    Get-Process -Name VRChat -ErrorAction SilentlyContinue | ForEach-Object {
+    $taken = @{}
+    Get-Process -Name VRChat -ErrorAction SilentlyContinue | Sort-Object StartTime | ForEach-Object {
         $start = $_.StartTime
         $log = $logs | Where-Object {
+            -not $taken.ContainsKey($_.FullName) -and
             $_.CreationTime -ge $start.AddSeconds(-2) -and $_.CreationTime -le $start.AddSeconds(30)
         } | Sort-Object CreationTime | Select-Object -First 1
+        if ($log) { $taken[$log.FullName] = $true }
         $info = [pscustomobject]@{ Profile = -1; Account = "(no log found)" }
         if ($log) { $info = Read-Log $log.FullName }
         [pscustomobject]@{
@@ -51,10 +64,10 @@ function Get-Clients {
 
 switch ($Action) {
     "start" {
-        if ($Url -eq "" -or $Profiles.Count -eq 0) { throw "start needs -Profiles and -Url" }
-        foreach ($p in $Profiles) {
+        if ($Url -eq "" -or $profileNumbers.Count -eq 0) { throw "start needs -Profiles and -Url" }
+        foreach ($p in $profileNumbers) {
             $arguments = @("--profile=$p")
-            if ($VrProfiles -notcontains $p) { $arguments += "--no-vr" }
+            if ($vrProfileNumbers -notcontains $p) { $arguments += "--no-vr" }
             $arguments += "`"$Url`""
             Start-Process -FilePath $Launcher -ArgumentList $arguments
             Write-Output "started profile $p"
@@ -63,7 +76,7 @@ switch ($Action) {
         }
     }
     "stop" {
-        $clients = @(Get-Clients | Where-Object { $Profiles.Count -eq 0 -or $Profiles -contains $_.Profile })
+        $clients = @(Get-Clients | Where-Object { $profileNumbers.Count -eq 0 -or $profileNumbers -contains $_.Profile })
         if ($clients.Count -eq 0) { Write-Output "no client to stop"; break }
         foreach ($c in $clients) { & taskkill.exe /PID $c.Id | Out-Null }
         $deadline = (Get-Date).AddSeconds($WaitSeconds)
