@@ -31,7 +31,22 @@ Append commands to `Temp/EditorTrigger/queue.txt` in the project (one per line; 
 - `stop`: leave Play Mode.
 - `upload`: build the open scene and upload it as a new version of its world (its `PipelineManager` world ID), through the VRChat SDK's builder API. Logs in from the SDK's saved credentials (the panel otherwise only logs in when drawn, which it isn't with Unity in the background). The project's build callbacks still run and can cancel it. It saves the scene as the SDK normalizes it (e.g. `AutoHold` on pickups): treat that as a Unity-generated change.
 
-Full details: the Editor log, `%LOCALAPPDATA%\Unity\Editor\Editor.log`.
+**Waiting for a command's outcome.** Each command logs `> <command>`, then ends with one of these lines (match them exactly when polling; anything else means it's still running, or a dialog stopped the queue, below):
+
+| Command | Done | Failed or stopped |
+|---|---|---|
+| `refresh` | `refreshed` | `refresh: compile errors (see the Editor log)` |
+| `select` | `selected <path>` | `select: no object at <path>` |
+| `menu` | `ran <path>` | `menu: no item <path>` |
+| `save` | `saved the open scenes` | `save failed` |
+| `play` | `Play Mode ended, N errors logged` (after `every text was logged; leaving Play Mode` or a time-up line) | `play: already in Play Mode`, `play: give the most seconds to wait first, …`, `play: Play Mode didn't start (compile errors?)` |
+| `stop` | `leaving Play Mode`, then `Play Mode ended, …` | `stop: not in Play Mode` |
+| `upload` | `upload: done` (after `upload: building and uploading …`) | `upload failed: <exception>: <message>`, `upload: needs the VRChat Worlds SDK …`, `upload: the scene has no world ID yet …`, `upload: the SDK isn't logged in …`, `upload: the control panel has no world builder`, `upload: interrupted by a domain reload`; waiting, not failed: `upload: waiting for the developer to accept VRChat's "Copyright ownership agreement" …` |
+| anything else | | `unknown command: <command>` |
+
+So a wait on an upload stops on `upload: done`, `upload failed`, or any other `upload:` line except `building and uploading`. An upload takes a minute or so.
+
+Full details: the Editor log, `%LOCALAPPDATA%\Unity\Editor\Editor.log`. Unity rewrites that file from its start when the editor starts, so lines from an earlier session can follow the current session's: read by the line numbers near the trigger's own log lines, not just the file's tail.
 
 **The copyright agreement.** The first `upload` of a world in each Unity session stops at VRChat's "Copyright ownership agreement" ("By clicking OK, I certify that I have the necessary rights to upload this content…"), a modal in the control panel's Build section, and the trigger logs `upload: waiting for the developer to accept VRChat's "Copyright ownership agreement"`. It's the developer's own legal certification: never click it or work around it. Tell them to click OK there (when they may be away, say the upload is waiting for it); Cancel fails the upload. After a Unity restart, expect it again, and say so before a production run.
 

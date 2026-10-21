@@ -7,7 +7,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-#if VRC_WORLDS_SDK
+#if VRC_WORLDS_SDK && UDON
 using VRC.Core;
 using VRC.SDK3.Editor;
 using VRC.SDKBase.Editor.Api;
@@ -27,7 +27,9 @@ using VRC.SDKBase.Editor.Api;
 //                                    its PipelineManager), as the VRChat SDK control panel's Build and Upload does
 // A modal dialog (e.g. an editor script's error dialog) stops the editor, and so the queue, until someone closes it.
 // Entering Play Mode reloads the domain, so the state of a command in progress is kept in SessionState. `upload` is
-// compiled only with the VRChat Worlds SDK (VRC_WORLDS_SDK, set by the assembly definition).
+// compiled only with the VRChat Worlds SDK (VRC_WORLDS_SDK, set by the assembly definition) and when the UDON define
+// is set: the SDK's VRC.SDK3.Editor assembly compiles only with it, and UDON is per platform, so it can be missing
+// for a moment while the editor switches platform (e.g. a multi-platform upload switching to Android).
 [InitializeOnLoad]
 public static class EditorTrigger {
     const string Folder = "Temp/EditorTrigger";
@@ -143,10 +145,10 @@ public static class EditorTrigger {
                 Log(EditorApplication.isPlaying ? "leaving Play Mode" : "stop: not in Play Mode");
                 break;
             case "upload":
-#if VRC_WORLDS_SDK
+#if VRC_WORLDS_SDK && UDON
                 Upload();
 #else
-                Log("upload: needs the VRChat Worlds SDK (com.vrchat.worlds)");
+                Log("upload: needs the VRChat Worlds SDK (com.vrchat.worlds) and the UDON define for this platform");
 #endif
                 break;
             default:
@@ -177,7 +179,7 @@ public static class EditorTrigger {
         EditorApplication.EnterPlaymode();
     }
 
-#if VRC_WORLDS_SDK
+#if VRC_WORLDS_SDK && UDON
     // Opens the SDK control panel if needed, waits for it to log in, then builds and uploads through its public
     // builder API. The SDK's build checks (the project's own IVRCSDKBuildRequestedCallbacks too) can still cancel it.
     static async void Upload() {
