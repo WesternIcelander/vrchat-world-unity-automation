@@ -40,6 +40,7 @@ public static class EditorTrigger {
     const string KeyDeadline = "EditorTrigger.deadline"; // editor time the command gives up (or, compiling, settles)
     const string KeyStartDeadline = "EditorTrigger.startDeadline"; // editor time Play Mode must have started by
     const string KeyWaitFor = "EditorTrigger.waitFor"; // texts not logged yet, separated by '|'
+    const string KeyWaitedAll = "EditorTrigger.waitedAll"; // every text given to play has been logged
     const string KeyPlayed = "EditorTrigger.played"; // Play Mode was seen running
     const string KeyExiting = "EditorTrigger.exiting"; // this has asked Play Mode to end
     const string KeyErrors = "EditorTrigger.errors"; // errors and exceptions logged in Play Mode
@@ -173,6 +174,7 @@ public static class EditorTrigger {
         SessionState.SetString(KeyStartDeadline, (now + StartSeconds).ToString("R", CultureInfo.InvariantCulture));
         SessionState.SetString(KeyDeadline, (now + StartSeconds + seconds).ToString("R", CultureInfo.InvariantCulture));
         SessionState.SetBool(KeyPlayed, false);
+        SessionState.SetBool(KeyWaitedAll, false);
         SessionState.SetBool(KeyExiting, false);
         SessionState.SetInt(KeyErrors, 0);
         SessionState.SetString(KeyState, StatePlay);
@@ -262,7 +264,7 @@ public static class EditorTrigger {
         }
         if (SessionState.GetBool(KeyExiting, false)) return;
         string waitFor = SessionState.GetString(KeyWaitFor, "");
-        bool waited = waitFor != "" && waitFor.Replace("|", "") == "";
+        bool waited = SessionState.GetBool(KeyWaitedAll, false);
         if (waited) {
             Log("every text was logged; leaving Play Mode");
         } else if (now > GetTime(KeyDeadline)) {
@@ -294,7 +296,11 @@ public static class EditorTrigger {
             texts[i] = "";
             changed = true;
         }
-        if (changed) SessionState.SetString(KeyWaitFor, string.Join("|", texts));
+        if (!changed) return;
+        string left = string.Join("|", texts);
+        SessionState.SetString(KeyWaitFor, left);
+        // A single crossed-off text leaves "", the same as no texts given, so record it separately.
+        if (left.Replace("|", "") == "") SessionState.SetBool(KeyWaitedAll, true);
     }
 
     static void Finish() {
@@ -303,6 +309,7 @@ public static class EditorTrigger {
         SessionState.EraseString(KeyDeadline);
         SessionState.EraseString(KeyStartDeadline);
         SessionState.EraseBool(KeyPlayed);
+        SessionState.EraseBool(KeyWaitedAll);
         SessionState.EraseBool(KeyExiting);
         SessionState.EraseInt(KeyErrors);
     }
