@@ -45,11 +45,14 @@ if ($Force -or $installed -lt $bundled) {
     Write-Output "editor scripts: $installed is up to date"
 }
 
-# Git's local exclude list.
+# Git's local exclude list. Outside a repository git writes to stderr, which "Stop" turns into an error in Windows
+# PowerShell, so it's relaxed while git runs.
 Push-Location $Project
+$ErrorActionPreference = "Continue"
 try {
     $exclude = (& git rev-parse --git-path info/exclude 2>$null)
 } finally {
+    $ErrorActionPreference = "Stop"
     Pop-Location
 }
 if ($LASTEXITCODE -eq 0 -and $exclude) {

@@ -21,7 +21,20 @@ The trigger folder and its `.meta` are listed in `.git/info/exclude` (git's own 
 
 ## The editor trigger
 
-Append commands to `Temp/EditorTrigger/queue.txt` in the project (one per line; several at once run in order) and read the outcome from `Temp/EditorTrigger/log.txt`. Remember the log's line count before queuing, and poll for the new lines.
+Commands go into `Temp/EditorTrigger/queue.txt` in the project (one per line; several at once run in order), and their outcomes come back in `Temp/EditorTrigger/log.txt`. **Run them through `trigger.ps1`** in the skill folder rather than writing your own wait loop:
+
+```
+& "$HOME\.claude\skills\vrchat-world-unity-automation\trigger.ps1" -Project <path> refresh "menu Tools/My Tool/Build" "play 420 [Test] done|passed"
+powershell -ExecutionPolicy Bypass -File <script> -Project <path> refresh save      # from Bash
+```
+
+It queues the commands, prints the trigger's new log lines as they come, and exits once every command has ended: **0** if all ended with their "done" line, **1** if one ended with its "failed or stopped" line (table below), **2** if one got no outcome in time (`-TimeoutSeconds`, default 300 per command; a `play` also gets its own seconds, and an `upload` 1800). On exit 2 it says what the trigger wrote last, how long ago the Editor log was written, and any dialog open in that project's editor (see "Things that stop the queue"). Run it in the foreground when it fits the shell tool's limit (10 minutes). Otherwise run it in the background and wait for its completion notice: don't poll its output file.
+
+Writing the files by hand instead? Then mind these three things, which have each caused waits that never ended:
+
+- **Each log line starts with the time:** `12:43:51 refreshed`, not `refreshed`. Match the outcome texts after that prefix (e.g. `grep -E '^[0-9:]{8} refreshed$'`), never with `^refreshed`.
+- **Unity clears `Temp/` when it opens a project,** which deletes a queue written before then. Queue only once the editor has opened the project (`trigger.ps1` notices this and queues the commands again).
+- **Every wait needs an end:** match the failed lines too, and give up after a set time.
 
 - `refresh`: resolve packages, import changed files and compile, logging `refreshed` or `refresh: compile errors (see the Editor log)`. **Queue one after every code change**: it compiles even with Unity in the background, which Unity's own auto-refresh doesn't.
 - `select <hierarchy path>`: select an object (for editor scripts acting on the selection).
@@ -31,7 +44,7 @@ Append commands to `Temp/EditorTrigger/queue.txt` in the project (one per line; 
 - `stop`: leave Play Mode.
 - `upload`: build the open scene and upload it as a new version of its world (its `PipelineManager` world ID), through the VRChat SDK's builder API. Logs in from the SDK's saved credentials (the panel otherwise only logs in when drawn, which it isn't with Unity in the background). The project's build callbacks still run and can cancel it. It saves the scene as the SDK normalizes it (e.g. `AutoHold` on pickups): treat that as a Unity-generated change.
 
-**Waiting for a command's outcome.** Each command logs `> <command>`, then ends with one of these lines (match them exactly when polling; anything else means it's still running, or a dialog stopped the queue, below):
+**Waiting for a command's outcome.** Each command logs `> <command>`, then ends with one of these lines, after the time prefix. `trigger.ps1` matches them for you. Any other line means the command is still running, or that a dialog stopped the queue (below):
 
 | Command | Done | Failed or stopped |
 |---|---|---|
@@ -86,3 +99,4 @@ Defaults, unless `developer.md` says otherwise:
 
 - Claude Code's permission classifier has refused compiling C# with Unity's bundled `csc` outside Unity as a "production deploy". Compile through `refresh` instead.
 - To check whether Unity has focus (for diagnosing compile waits): `GetForegroundWindow` through PowerShell `Add-Type`, compared against the Unity process.
+- Keep a throwaway Unity project (e.g. a clean project for checking a package) at a short path, not under `%TEMP%` or a scratchpad: UdonSharp fails with `DirectoryNotFoundException` on files past Windows' 260-character path limit.
