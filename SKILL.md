@@ -10,6 +10,8 @@ Everything lives in this skill's folder (`$HOME\.claude\skills\vrchat-world-unit
 - `Assets/VRChatWorldUnityAutomation/` (and its `.meta`): the editor trigger, editor-only with its own assembly definition, copied from the skill's `unity/` by `install.ps1`. Not an embedded package: registering one rewrites `Packages/packages-lock.json`, which projects commit.
 - `TestingAutomation.md`: that project's settings (test texts, test instance, reminders). **Read it before any testing work in the project**, and follow its reminders.
 
+**Before any testing work in a project, run `install.ps1` there** (no `-SettingsIgnore` needed once the project is set up). It does nothing when the project's trigger is current. When the skill has a newer one, it copies it in: then run `trigger.ps1 -Project <path> refresh` so the running trigger compiles its replacement (Unity itself doesn't import new files while its window lacks focus).
+
 The trigger folder and its `.meta` are listed in `.git/info/exclude` (git's own ignore list, not committed): it's this developer's tool. `TestingAutomation.md` is kept out of git where the developer chose when setting up (below): the project's `.gitignore` or `.git/info/exclude`. Never commit the files themselves.
 
 ## Setting up a project
